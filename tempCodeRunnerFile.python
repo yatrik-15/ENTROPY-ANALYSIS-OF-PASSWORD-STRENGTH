@@ -1,0 +1,21 @@
+import matplotlib.pyplot as plt
+import numpy as np
+# (Inside a plotting function or in your main script)
+text_for_plot = rockyou.replace('\n', '')
+char_counts = Counter(text_for_plot)
+common_chars = char_counts.most_common(30)
+
+# Unzip the data for plotting
+characters, counts = zip(*common_chars)
+plt.figure(figsize=(15, 7))
+plt.bar(characters, counts, color='blue')
+plt.title('Top 30 Most Frequent Characters in rockyou.txt')
+plt.xlabel('Character')
+plt.ylabel('Frequency (Count)')
+plt.xticks(rotation=60) # Rotate x-axis labels
+plt.tight_layout()
+
+# Save and show the plot
+plt.savefig('character_distribution.png')
+print("Visualization saved as 'character_distribution.png'")
+plt.show()
