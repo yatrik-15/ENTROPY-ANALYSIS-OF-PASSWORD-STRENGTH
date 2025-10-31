@@ -62,7 +62,7 @@ This is a single-file static web application. No installation is required.
 
 Clone or Download:
 
-git clone [https://github.com/YourUsername/Your-Repo-Name.git](https://github.com/YourUsername/Your-Repo-Name.git)
+git clone [(https://github.com/yatrik-15/ENTROPY-ANALYSIS-OF-PASSWORD-STRENGTH.git)]
 
 
 (Or just download the index.html file).
