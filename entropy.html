@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Entropy Analyzer</title>
+    <!-- 1. Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 2. Chart.js (for the graph) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; } /* bg-gray-800 */
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; } /* bg-gray-600 */
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; } /* bg-gray-500 */
+        html { scroll-behavior: smooth; }
+
+        /* Custom class for the entropy strength colors */
+        .strength-very-weak { color: #ef4444; } /* red-500 */
+        .strength-weak { color: #f97316; } /* orange-500 */
+        .strength-medium { color: #eab308; } /* yellow-500 */
+        .strength-strong { color: #22c55e; } /* green-500 */
+        .strength-very-strong { color: #06b6d4; } /* cyan-500 */
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-300 font-sans leading-relaxed">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-2">
+                🔑 Password Entropy Analyzer
+            </h1>
+            <p class="text-lg text-cyan-400">
+                A mathematical analysis of password strength using Shannon Entropy.
+            </p>
+        </header>
+
+        <!-- Main Grid Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- Left Column: Controls & Chart -->
+            <div class="flex flex-col gap-6">
+
+                <!-- Controls: Tabs for Text/File -->
+                <div class="bg-gray-800 rounded-lg shadow-lg">
+                    <div class="flex border-b border-gray-700">
+                        <button id="tab-text" class="flex-1 py-3 px-4 text-center font-semibold text-white border-b-2 border-cyan-500">Paste Text</button>
+                        <button id="tab-file" class="flex-1 py-3 px-4 text-center font-semibold text-gray-400 border-b-2 border-transparent hover:text-white">Upload File</button>
+                    </div>
+
+                    <!-- Option 1: Paste Text -->
+                    <div id="panel-text" class="p-6">
+                        <textarea id="text-input" rows="8" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-md shadow-inner text-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Paste a list of passwords here..."></textarea>
+                        <button id="analyze-text-btn" class="mt-4 w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center justify-center">
+                            <svg id="spinner-text" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Analyze Text</span>
+                        </button>
+                    </div>
+
+                    <!-- Option 2: Upload File -->
+                    <div id="panel-file" class="p-6 hidden">
+                        <label for="file-upload" class="flex flex-col items-center justify-center w-full h-32 px-4 transition bg-gray-700 border-2 border-gray-600 border-dashed rounded-md cursor-pointer hover:bg-gray-600 hover:border-gray-500">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <svg class="w-10 h-10 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-4-4V7a4 4 0 014-4h.5a3.5 3.5 0 017 0H17a4 4 0 014 4v5a4 4 0 01-4 4H7z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m0 4v.01"></path></svg>
+                                <p class="mb-2 text-sm text-gray-400"><span class="font-semibold">Click to upload</span> or drag and drop</p>
+                                <p id="file-name" class="text-xs text-gray-500">e.g., rockyou.txt (max 200MB)</p>
+                            </div>
+                            <input id="file-upload" type="file" class="hidden" />
+                        </label>
+                        <button id="analyze-file-btn" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-300 ease-in-out flex items-center justify-center" disabled>
+                            <svg id="spinner-file" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Analyze File</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Chart Panel -->
+                <div class="bg-gray-800 p-6 rounded-lg shadow-lg flex-grow flex flex-col min-h-[400px]">
+                    <h2 class="text-xl font-semibold text-white mb-3">Top 30 Character Frequency</h2>
+                    <div class="flex-grow relative">
+                        <canvas id="entropy-chart"></canvas>
+                    </div>
+                </div>
+
+            </div> <!-- End Left Column -->
+
+            <!-- Right Column: Results Dashboard -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-white">📊 Analysis Dashboard</h2>
+                    <button id="clear-btn" class="text-sm bg-gray-600 hover:bg-gray-700 text-gray-300 font-semibold py-1 px-3 rounded-lg transition duration-300">
+                        Clear
+                    </button>
+                </div>
+
+                <!-- Placeholder -->
+                <div id="results-placeholder" class="text-center text-gray-500 italic py-24">
+                    Run an analysis to see the results.
+                </div>
+
+                <!-- Results Container -->
+                <div id="results-container" class="hidden">
+                    
+                    <!-- Main Entropy Result -->
+                    <div class="bg-gray-700 p-6 rounded-lg shadow-inner mb-6">
+                        <div class="text-center">
+                            <span class="text-lg text-cyan-400">Shannon Entropy</span>
+                            <p id="entropy-value" class="text-5xl font-bold text-white my-2">0.000</p>
+                            <p class="text-lg text-cyan-400">bits/char</p>
+                            <p id="entropy-strength" class="text-2xl font-bold mt-3 strength-very-weak">Very Weak</p>
+                        </div>
+                    </div>
+
+                    <!-- Stat Cards Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <!-- Total Passwords -->
+                        <div class="bg-gray-700 p-4 rounded-lg shadow-inner flex items-center">
+                            <div class="p-3 bg-blue-600 rounded-lg mr-4">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                            </div>
+                            <div>
+                                <span class="text-sm text-gray-400">Total Passwords</span>
+                                <p id="total-passwords" class="text-2xl font-bold text-white">0</p>
+                            </div>
+                        </div>
+                        <!-- Total Characters -->
+                        <div class="bg-gray-700 p-4 rounded-lg shadow-inner flex items-center">
+                            <div class="p-3 bg-blue-600 rounded-lg mr-4">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
+                            </div>
+                            <div>
+                                <span class="text-sm text-gray-400">Total Characters</span>
+                                <p id="total-chars" class="text-2xl font-bold text-white">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Character Set Breakdown -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-white mb-3">Character Set Analysis</h3>
+                        <div class="space-y-3">
+                            <!-- Lowercase -->
+                            <div class="flex items-center bg-gray-700 p-3 rounded-lg">
+                                <span class="text-2xl mr-4">a-z</span>
+                                <div class="w-full bg-gray-600 rounded-full h-6">
+                                    <div id="bar-lower" class="bg-green-500 h-6 rounded-full text-xs font-medium text-blue-100 text-center p-0.5 leading-none" style="width: 0%"></div>
+                                </div>
+                                <span id="count-lower" class="text-lg font-mono ml-4 w-16 text-right">0</span>
+                            </div>
+                            <!-- Uppercase -->
+                            <div class="flex items-center bg-gray-700 p-3 rounded-lg">
+                                <span class="text-2xl mr-4">A-Z</span>
+                                <div class="w-full bg-gray-600 rounded-full h-6">
+                                    <div id="bar-upper" class="bg-yellow-500 h-6 rounded-full text-xs font-medium text-blue-100 text-center p-0.5 leading-none" style="width: 0%"></div>
+                                </div>
+                                <span id="count-upper" class="text-lg font-mono ml-4 w-16 text-right">0</span>
+                            </div>
+                            <!-- Numbers -->
+                            <div class="flex items-center bg-gray-700 p-3 rounded-lg">
+                                <span class="text-2xl mr-4">0-9</span>
+                                <div class="w-full bg-gray-600 rounded-full h-6">
+                                    <div id="bar-nums" class="bg-red-500 h-6 rounded-full text-xs font-medium text-blue-100 text-center p-0.5 leading-none" style="width: 0%"></div>
+                                </div>
+                                <span id="count-nums" class="text-lg font-mono ml-4 w-16 text-right">0</span>
+                            </div>
+                            <!-- Symbols -->
+                            <div class="flex items-center bg-gray-700 p-3 rounded-lg">
+                                <span class="text-2xl mr-4">!@#</span>
+                                <div class="w-full bg-gray-600 rounded-full h-6">
+                                    <div id="bar-symbols" class="bg-purple-500 h-6 rounded-full text-xs font-medium text-blue-100 text-center p-0.5 leading-none" style="width: 0%"></div>
+                                </div>
+                                <span id="count-symbols" class="text-lg font-mono ml-4 w-16 text-right">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div> <!-- End Results Container -->
+            </div> <!-- End Right Column -->
+
+        </div> <!-- End Main Grid -->
+
+    </div> <!-- End Container -->
+
+    <script>
+        // --- Globals ---
+        let entropyChart = null;
+        let uploadedFile = null;
+
+        // --- DOM Elements ---
+        const tabText = document.getElementById('tab-text');
+        const tabFile = document.getElementById('tab-file');
+        const panelText = document.getElementById('panel-text');
+        const panelFile = document.getElementById('panel-file');
+        
+        const textInput = document.getElementById('text-input');
+        const analyzeTextBtn = document.getElementById('analyze-text-btn');
+        const spinnerT = document.getElementById('spinner-text');
+        
+        const fileUpload = document.getElementById('file-upload');
+        const fileNameEl = document.getElementById('file-name');
+        const analyzeFileBtn = document.getElementById('analyze-file-btn');
+        const spinnerF = document.getElementById('spinner-file');
+        const clearBtn = document.getElementById('clear-btn');
+
+        const resultsPlaceholder = document.getElementById('results-placeholder');
+        const resultsContainer = document.getElementById('results-container');
+        
+        const entropyEl = document.getElementById('entropy-value');
+        const entropyStrengthEl = document.getElementById('entropy-strength');
+        const totalPasswordsEl = document.getElementById('total-passwords');
+        const totalCharsEl = document.getElementById('total-chars');
+        
+        const countLower = document.getElementById('count-lower');
+        const countUpper = document.getElementById('count-upper');
+        const countNums = document.getElementById('count-nums');
+        const countSymbols = document.getElementById('count-symbols');
+        const barLower = document.getElementById('bar-lower');
+        const barUpper = document.getElementById('bar-upper');
+        const barNums = document.getElementById('bar-nums');
+        const barSymbols = document.getElementById('bar-symbols');
+        
+        const chartCanvas = document.getElementById('entropy-chart');
+
+        // --- Core Logic ---
+
+        /**
+         * Calculates the Shannon entropy and detailed stats.
+         * @param {string} text - The input text to analyze.
+         * @returns {object} An object containing all analysis results.
+         */
+        function analyzeData(text) {
+            const charCounts = new Map();
+            let textLength = 0;
+            let passwordCount = 1; // Start at 1, add 1 for each newline
+            
+            const sets = {
+                lower: new Set(),
+                upper: new Set(),
+                nums: new Set(),
+                symbols: new Set()
+            };
+
+            const re = {
+                lower: /[a-z]/,
+                upper: /[A-Z]/,
+                nums: /[0-9]/
+            };
+
+            // 1. Count characters and categorize
+            for (const char of text) {
+                if (char === '\n') {
+                    passwordCount++;
+                    continue; // Skip newlines from analysis
+                }
+                textLength++;
+                charCounts.set(char, (charCounts.get(char) || 0) + 1);
+
+                if (re.lower.test(char)) sets.lower.add(char);
+                else if (re.upper.test(char)) sets.upper.add(char);
+                else if (re.nums.test(char)) sets.nums.add(char);
+                else if (char.trim() !== '') sets.symbols.add(char); // Basic symbol check
+            }
+            if (textLength === 0) passwordCount = 0;
+
+            const uniqueTotal = charCounts.size;
+            if (textLength === 0) {
+                return {
+                    entropy: 0, textLength: 0, passwordCount: 0, charCounts: new Map(),
+                    charSet: { lower: 0, upper: 0, nums: 0, symbols: 0, total: 0 }
+                };
+            }
+
+            // 2. Calculate entropy
+            let entropy = 0.0;
+            for (const count of charCounts.values()) {
+                const probability = count / textLength;
+                entropy -= probability * Math.log2(probability);
+            }
+
+            return {
+                entropy,
+                textLength,
+                passwordCount,
+                charCounts,
+                charSet: {
+                    lower: sets.lower.size,
+                    upper: sets.upper.size,
+                    nums: sets.nums.size,
+                    symbols: sets.symbols.size,
+                    total: uniqueTotal
+                }
+            };
+        }
+        
+        /**
+         * Gets a strength rating based on entropy score.
+         * @param {number} entropy - The Shannon entropy score.
+         * @returns {Array} [text, cssClass]
+         */
+        function getStrengthRating(entropy) {
+            if (entropy < 2.5) return ["Very Weak", "strength-very-weak"];
+            if (entropy < 3.0) return ["Weak", "strength-weak"];
+            if (entropy < 3.5) return ["Medium", "strength-medium"];
+            if (entropy < 4.0) return ["Strong", "strength-strong"];
+            return ["Very Strong", "strength-very-strong"];
+        }
+
+        /**
+         * Resets the UI to its initial state.
+         */
+        function resetUI() {
+            resultsPlaceholder.classList.remove('hidden');
+            resultsContainer.classList.add('hidden');
+
+            entropyEl.textContent = '0.000';
+            entropyStrengthEl.textContent = '...';
+            entropyStrengthEl.className = 'text-2xl font-bold mt-3';
+            
+            totalPasswordsEl.textContent = '0';
+            totalCharsEl.textContent = '0';
+
+            const counts = [countLower, countUpper, countNums, countSymbols];
+            const bars = [barLower, barUpper, barNums, barSymbols];
+            
+            counts.forEach(el => el.textContent = '0');
+            bars.forEach(el => {
+                el.style.width = '0%';
+                el.textContent = '';
+            });
+
+            if (entropyChart) {
+                entropyChart.destroy();
+                entropyChart = null;
+            }
+            
+            textInput.value = '';
+            fileUpload.value = null;
+            uploadedFile = null;
+            fileNameEl.textContent = "e.g., rockyou.txt (max 200MB)";
+            fileNameEl.classList.remove('text-red-500');
+            analyzeFileBtn.disabled = true;
+        }
+
+        /**
+         * Updates the UI with the analysis results.
+         * @param {object} results - The results object from analyzeData.
+         */
+        function updateUI(results) {
+            const { entropy, textLength, passwordCount, charCounts, charSet } = results;
+
+            // Show results table, hide placeholder
+            resultsPlaceholder.classList.add('hidden');
+            resultsContainer.classList.remove('hidden');
+
+            // 1. Update main stats
+            entropyEl.textContent = entropy.toFixed(4);
+            const [strengthText, strengthClass] = getStrengthRating(entropy);
+            entropyStrengthEl.textContent = strengthText;
+            entropyStrengthEl.className = `text-2xl font-bold mt-3 ${strengthClass}`; // Reset classes
+            
+            totalPasswordsEl.textContent = passwordCount.toLocaleString();
+            totalCharsEl.textContent = textLength.toLocaleString();
+
+            // 2. Update character set breakdown
+            countLower.textContent = charSet.lower;
+            countUpper.textContent = charSet.upper;
+            countNums.textContent = charSet.nums;
+            countSymbols.textContent = charSet.symbols;
+
+            // Update bars
+            const totalUnique = charSet.total || 1; // Avoid division by zero
+            barLower.style.width = `${(charSet.lower / totalUnique) * 100}%`;
+            barUpper.style.width = `${(charSet.upper / totalUnique) * 100}%`;
+            barNums.style.width = `${(charSet.nums / totalUnique) * 100}%`;
+            barSymbols.style.width = `${(charSet.symbols / totalUnique) * 100}%`;
+            
+            barLower.textContent = `${((charSet.lower / totalUnique) * 100).toFixed(0)}%`;
+            barUpper.textContent = `${((charSet.upper / totalUnique) * 100).toFixed(0)}%`;
+            barNums.textContent = `${((charSet.nums / totalUnique) * 100).toFixed(0)}%`;
+            barSymbols.textContent = `${((charSet.symbols / totalUnique) * 100).toFixed(0)}%`;
+
+
+            // 3. Update chart
+            const sortedChars = Array.from(charCounts.entries()).sort((a, b) => b[1] - a[1]);
+            const top30 = sortedChars.slice(0, 30);
+            const labels = top30.map(item => item[0] === ' ' ? "' '" : item[0]);
+            const data = top30.map(item => item[1]);
+
+            if (entropyChart) entropyChart.destroy();
+
+            const ctx = chartCanvas.getContext('2d');
+            entropyChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Frequency',
+                        data: data,
+                        backgroundColor: 'rgba(56, 189, 248, 0.6)', // cyan-400
+                        borderColor: 'rgba(56, 189, 248, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: '#9ca3af' }, // gray-400
+                            grid: { color: '#374151' } // gray-700
+                        },
+                        x: {
+                            ticks: { color: '#9ca3af' },
+                            grid: { color: '#374151' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+        
+        /**
+         * Toggles the loading state of a button
+         * @param {HTMLButtonElement} button - The button element.
+         * @param {boolean} isLoading - The loading state.
+         */
+        function toggleButtonLoading(button, isLoading) {
+            const spinner = button.querySelector('svg');
+            const span = button.querySelector('span');
+            button.disabled = isLoading;
+            if (isLoading) {
+                spinner.classList.remove('hidden');
+                span.classList.add('hidden');
+            } else {
+                spinner.classList.add('hidden');
+                span.classList.remove('hidden');
+            }
+        }
+
+        // --- Event Listeners ---
+        
+        // Tab switching
+        tabText.addEventListener('click', () => {
+            // Show correct panel
+            panelText.classList.remove('hidden');
+            panelFile.classList.add('hidden');
+            
+            // Style active tab (tabText)
+            tabText.classList.add('text-white', 'border-cyan-500');
+            tabText.classList.remove('text-gray-400', 'border-transparent');
+            
+            // Style inactive tab (tabFile)
+            tabFile.classList.add('text-gray-400', 'border-transparent');
+            tabFile.classList.remove('text-white', 'border-cyan-500');
+        });
+        
+        tabFile.addEventListener('click', () => {
+            // Show correct panel
+            panelFile.classList.remove('hidden');
+            panelText.classList.add('hidden');
+            
+            // Style active tab (tabFile)
+            tabFile.classList.add('text-white', 'border-cyan-500');
+            tabFile.classList.remove('text-gray-400', 'border-transparent');
+
+            // Style inactive tab (tabText)
+            tabText.classList.add('text-gray-400', 'border-transparent');
+            tabText.classList.remove('text-white', 'border-cyan-500');
+        });
+
+        // 1. Text Input Analysis
+        analyzeTextBtn.addEventListener('click', () => {
+            const text = textInput.value;
+            if (!text) {
+                alert('Please paste some text into the box first.');
+                return;
+            }
+            toggleButtonLoading(analyzeTextBtn, true);
+
+            setTimeout(() => {
+                const results = analyzeData(text);
+                updateUI(results);
+                toggleButtonLoading(analyzeTextBtn, false);
+            }, 50);
+        });
+
+        // 2. File Upload Handling
+        fileUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                if (file.size > 200 * 1024 * 1024) { // 200 MB limit
+                    alert('File is too large. Please use a file under 200MB.');
+                    fileNameEl.textContent = "File too large!";
+                    fileNameEl.classList.add('text-red-500');
+                    uploadedFile = null;
+                    analyzeFileBtn.disabled = true;
+                    return;
+                }
+                uploadedFile = file;
+                fileNameEl.textContent = file.name;
+                fileNameEl.classList.remove('text-red-500');
+                analyzeFileBtn.disabled = false;
+            }
+        });
+
+        // 3. File Analysis
+        analyzeFileBtn.addEventListener('click', () => {
+            if (!uploadedFile) {
+                alert('Please select a file first.');
+                return;
+            }
+
+            toggleButtonLoading(analyzeFileBtn, true);
+            analyzeTextBtn.disabled = true; // Disable other button
+
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                const text = e.target.result;
+                setTimeout(() => {
+                    const results = analyzeData(text);
+                    updateUI(results);
+                    toggleButtonLoading(analyzeFileBtn, false);
+                    analyzeTextBtn.disabled = false; 
+                }, 50);
+            };
+
+            reader.onerror = () => {
+                alert('Error reading file.');
+                toggleButtonLoading(analyzeFileBtn, false);
+                analyzeTextBtn.disabled = false;
+            };
+
+            reader.readAsText(uploadedFile, 'ISO-8859-1'); // Use 'latin-1' encoding
+        });
+        
+        // 4. Clear Button
+        clearBtn.addEventListener('click', resetUI);
+
+        // Initial setup
+        resetUI();
+
+    </script>
+</body>
+</html>
+
+
